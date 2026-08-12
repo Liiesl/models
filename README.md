@@ -9,9 +9,9 @@ No more fetching a 6 MB file to find a single model. Each provider gets its own 
 One request per provider, served from the Pages CDN:
 
 ```
-https://liiesl.github.io/models/openai.json
-https://liiesl.github.io/models/anthropic.json
-https://liiesl.github.io/models/openrouter.json
+https://models.pileofthings.top/openai.json
+https://models.pileofthings.top/anthropic.json
+https://models.pileofthings.top/openrouter.json
 ```
 
 Each file is the raw provider object from models.dev (`id`, `env`, `npm`, `name`, `doc`, `api`, `models`).
@@ -21,7 +21,7 @@ Each file is the raw provider object from models.dev (`id`, `env`, `npm`, `name`
 `index.json` lists every available provider (id, name, npm package, model count) and the last build time, so clients can discover the catalog without downloading anything big:
 
 ```
-https://liiesl.github.io/models/index.json
+https://models.pileofthings.top/index.json
 ```
 
 ## Included providers
