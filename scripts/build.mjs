@@ -12,6 +12,7 @@ const ALLOWED_NPM = new Set([
   '@ai-sdk/google',
   '@openrouter/ai-sdk-provider',
   '@ai-sdk/xai',
+  '@ai-sdk/mistral',
 ]);
 
 const api = JSON.parse(readFileSync(SOURCE, 'utf8'));

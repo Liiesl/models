@@ -36,6 +36,7 @@ Only providers whose provider-level `npm` field is one of:
 | `@ai-sdk/google` | Google |
 | `@openrouter/ai-sdk-provider` | OpenRouter |
 | `@ai-sdk/xai` | xAI |
+| `@ai-sdk/mistral` | Mistral |
 
 All other providers are excluded.
 
