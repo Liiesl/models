@@ -1,9 +1,17 @@
-import { readFileSync, writeFileSync, readdirSync, unlinkSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { join } from 'node:path';
 
 const SOURCE = join(import.meta.dirname, '..', 'api.json');
-const OUTPUT_DIR = join(import.meta.dirname, '..');
+const OUTPUT_DIR = join(import.meta.dirname, '..', 'docs');
 const INDEX_FILE = 'index.json';
+const CNAME_FILE = 'CNAME';
 
 const ALLOWED_NPM = new Set([
   '@ai-sdk/openai-compatible',
@@ -21,66 +29,67 @@ const kept = Object.entries(api).filter(
   ([, provider]) => typeof provider?.npm === 'string' && ALLOWED_NPM.has(provider.npm),
 );
 
+mkdirSync(OUTPUT_DIR, { recursive: true });
+
 const index = {
   last_updated: new Date().toISOString(),
   source: 'https://models.dev/api.json',
   provider_count: kept.length,
-  providers: [],
+  providers: kept.map(([id, provider]) => ({
+    id,
+    name: provider.name,
+    npm: provider.npm,
+    model_count: provider.models ? Object.keys(provider.models).length : 0,
+  })),
 };
 
 const written = [];
 let failed = false;
 
-index.providers = kept.map(([id, provider]) => ({
-  id,
-  name: provider.name,
-  npm: provider.npm,
-  model_count: provider.models ? Object.keys(provider.models).length : 0,
-}));
-
 for (const [id, provider] of kept) {
   const payload = JSON.stringify(provider);
-  const file = join(OUTPUT_DIR, `${id}.json`);
-  try {
-    const existing = readFileSync(file, 'utf8');
-    if (existing === payload) continue;
-  } catch {
-    /* new file */
-  }
-  writeFileSync(file, payload);
-  written.push(id);
+  const dir = join(OUTPUT_DIR, id);
+  mkdirSync(dir, { recursive: true });
+  if (writeIfChanged(join(OUTPUT_DIR, `${id}.json`), payload)) written.push(`${id}.json`);
+  if (writeIfChanged(join(dir, INDEX_FILE), payload)) written.push(`${id}/index.json`);
 }
 
 const keptIds = new Set(kept.map(([id]) => id));
-const stale = readdirSync(OUTPUT_DIR)
-  .filter(
-    (f) =>
-      f.endsWith('.json') &&
-      f !== INDEX_FILE &&
-      f !== 'api.json' &&
-      !keptIds.has(f.slice(0, -5)),
-  )
-  .map((f) => f.slice(0, -5));
 
-for (const id of stale) {
+const stale = [];
+for (const entry of readdirSync(OUTPUT_DIR, { withFileTypes: true })) {
+  const { name } = entry;
+  if (
+    entry.isFile() &&
+    name.endsWith('.json') &&
+    name !== INDEX_FILE &&
+    !keptIds.has(name.slice(0, -5))
+  ) {
+    stale.push(name);
+  } else if (entry.isDirectory() && !keptIds.has(name)) {
+    stale.push(`${name}/`);
+  }
+}
+
+for (const name of stale) {
   try {
-    unlinkSync(join(OUTPUT_DIR, `${id}.json`));
+    rmSync(join(OUTPUT_DIR, name), { recursive: true, force: true });
   } catch (err) {
-    console.error(`failed to remove ${id}.json:`, err.message);
+    console.error(`failed to remove ${name}:`, err.message);
     failed = true;
   }
 }
 
-const indexPayload = JSON.stringify(index);
-try {
-  const existing = readFileSync(join(OUTPUT_DIR, INDEX_FILE), 'utf8');
-  if (existing !== indexPayload) writeFileSync(join(OUTPUT_DIR, INDEX_FILE), indexPayload);
-} catch {
-  writeFileSync(join(OUTPUT_DIR, INDEX_FILE), indexPayload);
-}
+writeIfChanged(join(OUTPUT_DIR, INDEX_FILE), JSON.stringify(index));
+
+const cnameSource = join(import.meta.dirname, '..', CNAME_FILE);
+const cnameTarget = join(OUTPUT_DIR, CNAME_FILE);
+let cname = existsSync(cnameSource) ? readFileSync(cnameSource, 'utf8') : '';
+if (!cname.trim() && existsSync(cnameTarget)) cname = readFileSync(cnameTarget, 'utf8');
+if (cname.trim()) writeIfChanged(cnameTarget, cname);
 
 const sizes = kept
-  .map(([id, provider]) => [id, join(OUTPUT_DIR, `${id}.json`)])
+  .map(([id]) => [id, join(OUTPUT_DIR, `${id}.json`)])
   .map(([id, file]) => [id, Math.round(fileSize(file) / 1024)]);
 
 console.log(`providers kept: ${kept.length}`);
@@ -90,6 +99,16 @@ console.log('largest per-provider files (KB):');
 console.table(sizes.sort((a, b) => b[1] - a[1]).slice(0, 10));
 
 if (failed) process.exitCode = 1;
+
+function writeIfChanged(file, payload) {
+  try {
+    if (readFileSync(file, 'utf8') === payload) return false;
+  } catch {
+    /* new file */
+  }
+  writeFileSync(file, payload);
+  return true;
+}
 
 function fileSize(file) {
   try {

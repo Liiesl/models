@@ -9,12 +9,14 @@ No more fetching a 6 MB file to find a single model. Each provider gets its own 
 One request per provider, served from the Pages CDN:
 
 ```
-https://models.pileofthings.top/openai.json
-https://models.pileofthings.top/anthropic.json
 https://models.pileofthings.top/openrouter.json
+https://models.pileofthings.top/anthropic.json
+https://models.pileofthings.top/openrouter/
 ```
 
 Each file is the raw provider object from models.dev (`id`, `env`, `npm`, `name`, `doc`, `api`, `models`).
+
+Every provider is available in two forms with identical content: the flat `/<provider>.json` and the directory URL `/<provider>/` (which 301-redirects from `/<provider>`), so clients can pick either style.
 
 ## Index
 
@@ -43,9 +45,11 @@ All other providers are excluded.
 ## How it works
 
 - A [GitHub Actions workflow](.github/workflows/build.yml) runs once a day (UTC 02:30) and on manual `workflow_dispatch`.
-- It downloads the latest `api.json` from models.dev, filters to the providers above, and writes one compact JSON file per provider to the repo root.
+- It downloads the latest `api.json` from models.dev, filters to the providers above, and writes one compact JSON file per provider into `docs/`.
+- `docs/` is the GitHub Pages publishing source, so the site root maps directly to the provider files.
 - Files are only rewritten (and committed) when their content actually changed.
 - `api.json` itself is gitignored so the 6 MB source never bloats the repo.
+- The build also keeps `docs/CNAME` in sync so the custom domain survives rebuilds.
 
 ## Manual run
 
@@ -55,4 +59,6 @@ gh workflow run build-db
 
 ## Setup
 
-In GitHub repo settings: **Settings → Pages → Deploy from a branch → `main` / `(root)` → Save**. Then trigger the workflow once (`Actions → build-db → Run workflow`).
+In GitHub repo settings: **Settings → Pages → Deploy from a branch → `main` / `docs` → Save**.
+
+Order matters: trigger the workflow first (`Actions → build-db → Run workflow`) so `docs/` exists on `main` before you flip the publishing source to `/docs` — otherwise Pages errors on the missing folder.
