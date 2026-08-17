@@ -32,6 +32,7 @@ const kept = Object.entries(api).filter(
 mkdirSync(OUTPUT_DIR, { recursive: true });
 
 const index = {
+  desc: 'Provider-specific mirror of models.dev, so clients fetch one provider instead of downloading the full 6 MB api.json',
   last_updated: new Date().toISOString(),
   source: 'https://models.dev/api.json',
   provider_count: kept.length,
