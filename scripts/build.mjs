@@ -39,6 +39,7 @@ const index = {
     id,
     name: provider.name,
     npm: provider.npm,
+    ...(provider.api ? { api: provider.api } : {}),
     model_count: provider.models ? Object.keys(provider.models).length : 0,
   })),
 };

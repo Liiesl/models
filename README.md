@@ -20,7 +20,7 @@ Every provider is available in two forms with identical content: the flat `/<pro
 
 ## Index
 
-`index.json` lists every available provider (id, name, npm package, model count) and the last build time, so clients can discover the catalog without downloading anything big:
+`index.json` lists every available provider (id, name, npm package, API base URL, model count) and the last build time, so clients can discover the catalog without downloading anything big:
 
 ```
 https://models.pileofthings.top/index.json
